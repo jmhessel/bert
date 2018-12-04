@@ -342,14 +342,6 @@ def read_examples(input_file):
   return examples
 
 
-def mean_pool_features(features_in):
-  mask = np.all(features_in != 0, axis=2).astype(np.float)
-  lengths = np.sum(mask, axis=1)
-  sum_pooled = np.sum(features_in, axis=1)
-  mean_pooled = np.expand_dims(1./lengths, axis=1) * sum_pooled
-  return mean_pooled
-
-
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
 
