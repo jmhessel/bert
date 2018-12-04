@@ -22,6 +22,8 @@ import codecs
 import collections
 import json
 import re
+import tqdm
+import numpy as np
 
 import modeling
 import tokenization
@@ -340,6 +342,14 @@ def read_examples(input_file):
   return examples
 
 
+def mean_pool_features(features_in):
+  mask = np.all(features_in != 0, axis=2).astype(np.float)
+  lengths = np.sum(mask, axis=1)
+  sum_pooled = np.sum(features_in, axis=1)
+  mean_pooled = np.expand_dims(1./lengths, axis=1) * sum_pooled
+  return mean_pooled
+
+
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -386,7 +396,7 @@ def main(_):
 
   with codecs.getwriter("utf-8")(tf.gfile.Open(FLAGS.output_file,
                                                "w")) as writer:
-    for result in estimator.predict(input_fn, yield_single_examples=True):
+    for result in tqdm.tqdm(estimator.predict(input_fn, yield_single_examples=True)):
       unique_id = int(result["unique_id"])
       feature = unique_id_to_feature[unique_id]
       output_json = collections.OrderedDict()
@@ -406,7 +416,18 @@ def main(_):
         features["token"] = token
         features["layers"] = all_layers
         all_features.append(features)
-      output_json["features"] = all_features
+
+      seq_of_outputs = []
+      for seq_idx, features in enumerate(all_features):
+        all_layers = []
+        for l in features['layers']:
+          all_layers.append(l['values'])
+        all_features = np.vstack(all_layers)
+        seq_of_outputs.append(np.expand_dims(all_features, 0))
+      full_feature = np.vstack(seq_of_outputs)
+      full_feature = np.mean(full_feature, axis=1)
+      full_feature = np.mean(full_feature, axis=0)
+      output_json['features'] = list(full_feature)
       writer.write(json.dumps(output_json) + "\n")
 
 
