@@ -420,7 +420,7 @@ def main(_):
       full_feature = np.mean(full_feature, axis=1)
       full_feature = np.mean(full_feature, axis=0)
       output_json['features'] = list(full_feature)
-      writer.write(json.dumps(output_json) + "\n")
+      writer.write('\t'.join([str(feat) for feat in full_feature]) + "\n")
 
 
 if __name__ == "__main__":
